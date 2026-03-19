@@ -1,0 +1,17 @@
+.git
+.github
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.db
+.sqlite
+.env
+.venv
+node_modules
+backup/
+TheInfluenceCrew_Project.zip
+git_step_commits.py
+original_dashboard.py
+original_notebook.ipynb
+original_requirements.txt

@@ -1,9 +1,9 @@
 # ============================================================
 # CI Pipeline — TheInfluenceCrew
 # Runs on: every push and every pull request to main
-# Purpose: Validate code quality, dependencies, notebook, and
+# Purpose: Validate code quality, security, dependencies, and
 #          Streamlit app on every code change.
-# Note: No deployment — app runs locally only.
+
 # ============================================================
 
 name: CI — Build & Validate
@@ -27,11 +27,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11.9"
+          python-version: "3.12"
           cache: "pip"                 # Cache pip downloads for speed
+
 
       - name: Install dependencies
         run: |
@@ -42,16 +43,30 @@ jobs:
         run: |
           python -c "
           import pandas, numpy, matplotlib, seaborn
-          import sklearn, scipy, openpyxl, streamlit
+          import sklearn, scipy, openpyxl, streamlit, wordcloud, fpdf
           print('✅ All imports successful')
-          print(f'  pandas     : {pandas.__version__}')
-          print(f'  numpy      : {numpy.__version__}')
-          print(f'  matplotlib : {matplotlib.__version__}')
-          print(f'  seaborn    : {seaborn.__version__}')
-          print(f'  sklearn    : {sklearn.__version__}')
-          print(f'  scipy      : {scipy.__version__}')
-          print(f'  streamlit  : {streamlit.__version__}')
           "
+
+  # ----------------------------------------------------------
+  # JOB 2: Security Scan (Bandit)
+  # Checks for common security vulnerabilities in code
+  # ----------------------------------------------------------
+  security:
+    name: 🛡️ Security Sanity Scan
+    runs-on: ubuntu-latest
+    needs: dependency-check
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Bandit
+        run: pip install bandit
+      - name: Run Bandit
+        run: bandit -r . -ll -ii
+
 
   # ----------------------------------------------------------
   # JOB 2: Code Linting
@@ -66,11 +81,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11.9"
+          python-version: "3.12"
           cache: "pip"
+
 
       - name: Install linting tools
         run: |
@@ -102,11 +118,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11.9"
+          python-version: "3.12"
           cache: "pip"
+
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -144,11 +161,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11.9"
+          python-version: "3.12"
           cache: "pip"
+
 
       - name: Install dependencies + nbconvert
         run: |
