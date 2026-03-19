@@ -1525,6 +1525,187 @@ with tabs[8]:
 
 
 # ═══════════════════════════════════════════════
+# TAB 10: TEXT ANALYTICS
+# ═══════════════════════════════════════════════
+with tabs[9]:
+    st.markdown('<div class="section-head">☁️ Text Analytics — Motivations, Content & Cross-Tabs</div>', unsafe_allow_html=True)
+    st.caption("Word clouds, chi-square significance tests, and cross-tabulation analysis of survey responses.")
+
+    ta_col1, ta_col2 = st.columns(2)
+
+    with ta_col1:
+        st.markdown("#### Purchase Motivation Word Cloud")
+        try:
+            from wordcloud import WordCloud
+            wc_text = ' '.join(filtered['purchase_motivation'].dropna().str.replace(';', ' '))
+            if wc_text.strip():
+                wc_bg = '#16161f'
+                wc = WordCloud(
+                    width=700, height=380, background_color=wc_bg,
+                    colormap='plasma', max_words=80,
+                    prefer_horizontal=0.85,
+                    collocations=False
+                ).generate(wc_text)
+                fig, ax = plt.subplots(figsize=(7, 4))
+                ax.imshow(wc, interpolation='bilinear')
+                ax.axis('off')
+                ax.set_title('Purchase Motivation Word Cloud', fontweight='bold', pad=10)
+                st.pyplot(fig, use_container_width=True)
+                plt.close()
+            else:
+                st.info("No motivation text data available in current filter.")
+        except ImportError:
+            st.warning("⚠️ `wordcloud` package not installed. Run: `pip install wordcloud`")
+
+    with ta_col2:
+        st.markdown("#### Content Type Word Cloud")
+        try:
+            from wordcloud import WordCloud
+            ct_text = ' '.join(filtered['content_type'].dropna().str.replace(';', ' ').str.replace('/', ' '))
+            if ct_text.strip():
+                wc2 = WordCloud(
+                    width=700, height=380, background_color='#16161f',
+                    colormap='cool', max_words=60, prefer_horizontal=0.8,
+                    collocations=False
+                ).generate(ct_text)
+                fig, ax = plt.subplots(figsize=(7, 4))
+                ax.imshow(wc2, interpolation='bilinear')
+                ax.axis('off')
+                ax.set_title('Content Type Word Cloud', fontweight='bold', pad=10)
+                st.pyplot(fig, use_container_width=True)
+                plt.close()
+        except ImportError:
+            pass
+
+    # Chi-square tests
+    st.markdown('<div class="section-head">🔬 Chi-Square Significance Tests</div>', unsafe_allow_html=True)
+    st.caption("Tests whether two categorical variables are statistically independent.")
+
+    from scipy.stats import chi2_contingency
+
+    chi_tests = [
+        ('Trust Factor', 'Made Purchase', 'trust_factor', 'made_purchase'),
+        ('Trust Factor', 'High Ad Responsive', 'trust_factor', 'high_ad_responsive'),
+        ('Age Group', 'Made Purchase', 'age_group', 'made_purchase'),
+        ('Gender', 'Made Purchase', 'gender', 'made_purchase'),
+        ('Preferred Ad Format', 'High Ad Responsive', 'preferred_ad_format', 'high_ad_responsive'),
+    ]
+
+    chi_results = []
+    for label_a, label_b, col_a, col_b in chi_tests:
+        try:
+            ct = pd.crosstab(filtered[col_a], filtered[col_b])
+            if ct.shape[0] >= 2 and ct.shape[1] >= 2:
+                chi2, p, dof, _ = chi2_contingency(ct)
+                n = filtered[[col_a, col_b]].dropna().shape[0]
+                cramers_v = np.sqrt(chi2 / (n * (min(ct.shape) - 1))) if n > 0 else 0
+                chi_results.append({
+                    'Variable A': label_a, 'Variable B': label_b,
+                    'Chi²': round(chi2, 3), 'df': dof,
+                    'p-value': round(p, 5),
+                    "Cramér's V": round(cramers_v, 3),
+                    'Significant?': '✅ Yes' if p < 0.05 else '❌ No',
+                    'Strength': 'Strong' if cramers_v > 0.3 else ('Moderate' if cramers_v > 0.15 else 'Weak')
+                })
+        except Exception:
+            pass
+
+    if chi_results:
+        chi_df = pd.DataFrame(chi_results)
+        st.dataframe(chi_df.style.applymap(
+            lambda v: 'color: #5cf0c8' if v == '✅ Yes' else ('color: #fc5c7d' if v == '❌ No' else ''),
+            subset=['Significant?']
+        ), use_container_width=True)
+
+        sig_pairs = [r for r in chi_results if r['Significant?'] == '✅ Yes']
+        if sig_pairs:
+            strongest = max(sig_pairs, key=lambda r: r["Cramér's V"])
+            cramers_val = strongest["Cramér's V"]
+            st.success(f"🏆 Strongest significant association: **{strongest['Variable A']} ↔ {strongest['Variable B']}** "
+                       f"(Cramér's V = {cramers_val:.3f}, p = {strongest['p-value']:.5f})")
+
+    else:
+        st.info("Not enough data for chi-square tests. Widen filters.")
+
+    # Cross-tab heatmaps
+    st.markdown('<div class="section-head">🗂️ Cross-Tabulation Heatmaps</div>', unsafe_allow_html=True)
+
+    xt_col1, xt_col2 = st.columns(2)
+
+    with xt_col1:
+        st.markdown("**Age Group × Preferred Content Type**")
+        try:
+            # Explode multi-select content types
+            ct_exploded = filtered[['age_group', 'content_type']].dropna()
+            ct_exploded = ct_exploded.assign(
+                content_type=ct_exploded['content_type'].str.split(';')
+            ).explode('content_type')
+            ct_exploded['content_type'] = ct_exploded['content_type'].str.strip()
+            ct_exploded = ct_exploded[ct_exploded['content_type'] != '']
+            xt1 = pd.crosstab(ct_exploded['age_group'], ct_exploded['content_type'])
+            if not xt1.empty:
+                fig, ax = plt.subplots(figsize=(8, 5))
+                sns.heatmap(xt1, annot=True, fmt='d', cmap='YlOrRd', ax=ax,
+                            linewidths=0.5, linecolor='#0a0a0f', annot_kws={'size': 8})
+                ax.set_title('Age Group × Content Type\n(respondent count)', fontweight='bold')
+                plt.xticks(rotation=35, ha='right', fontsize=8)
+                plt.yticks(fontsize=8)
+                plt.tight_layout()
+                st.pyplot(fig, use_container_width=True)
+                plt.close()
+        except Exception as e:
+            st.info(f"Could not render cross-tab: {e}")
+
+    with xt_col2:
+        st.markdown("**Trust Factor × Purchase Motivation**")
+        try:
+            motiv_exploded = filtered[['trust_factor', 'purchase_motivation']].dropna()
+            motiv_exploded = motiv_exploded.assign(
+                purchase_motivation=motiv_exploded['purchase_motivation'].str.split(';')
+            ).explode('purchase_motivation')
+            motiv_exploded['purchase_motivation'] = motiv_exploded['purchase_motivation'].str.strip()
+            motiv_exploded = motiv_exploded[motiv_exploded['purchase_motivation'] != '']
+            xt2 = pd.crosstab(motiv_exploded['trust_factor'], motiv_exploded['purchase_motivation'])
+            if not xt2.empty:
+                fig, ax = plt.subplots(figsize=(8, 5))
+                sns.heatmap(xt2, annot=True, fmt='d', cmap='Blues', ax=ax,
+                            linewidths=0.5, linecolor='#0a0a0f', annot_kws={'size': 8})
+                ax.set_title('Trust Factor × Purchase Motivation\n(co-occurrence count)', fontweight='bold')
+                plt.xticks(rotation=35, ha='right', fontsize=8)
+                plt.yticks(fontsize=8)
+                plt.tight_layout()
+                st.pyplot(fig, use_container_width=True)
+                plt.close()
+        except Exception as e:
+            st.info(f"Could not render cross-tab: {e}")
+
+    # Motivation frequency bar race
+    st.markdown('<div class="section-head">📊 Motivation Frequency by Age Group</div>', unsafe_allow_html=True)
+    try:
+        motiv_age = filtered[['age_group', 'purchase_motivation']].dropna()
+        motiv_age = motiv_age.assign(
+            purchase_motivation=motiv_age['purchase_motivation'].str.split(';')
+        ).explode('purchase_motivation')
+        motiv_age['purchase_motivation'] = motiv_age['purchase_motivation'].str.strip()
+        motiv_age = motiv_age[motiv_age['purchase_motivation'] != '']
+        motiv_pivot = pd.crosstab(motiv_age['purchase_motivation'], motiv_age['age_group'])
+        if not motiv_pivot.empty and motiv_pivot.shape[1] >= 2:
+            fig, ax = plt.subplots(figsize=(12, 5))
+            motiv_pivot.plot(kind='bar', ax=ax, color=PALETTE[:motiv_pivot.shape[1]],
+                             edgecolor='#0a0a0f', alpha=0.88)
+            ax.set_title('Purchase Motivations by Age Group', fontweight='bold')
+            ax.set_ylabel('Respondent Count')
+            ax.set_xlabel('')
+            plt.xticks(rotation=30, ha='right', fontsize=9)
+            ax.legend(title='Age Group', bbox_to_anchor=(1.01, 1), fontsize=9)
+            plt.tight_layout()
+            st.pyplot(fig, use_container_width=True)
+            plt.close()
+    except Exception:
+        pass
+
+
+# ═══════════════════════════════════════════════
 # TAB 6: RECOMMENDATIONS
 # ═══════════════════════════════════════════════
 with tabs[6]:
