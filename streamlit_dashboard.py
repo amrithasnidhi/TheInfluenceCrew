@@ -388,7 +388,8 @@ st.markdown("---")
 # TABS
 # ─────────────────────────────────────────────
 tabs = st.tabs(["📊 Overview", "🔗 Factor Analysis", "🤖 Predictions", 
-                 "⛏️ Pattern Mining", "🕸️ Network Analysis", "📈 Trends & PCA", "🏆 Recommendations"])
+                 "⛏️ Pattern Mining", "🕸️ Network Analysis", "📈 Trends & PCA", "🏆 Recommendations",
+                 "🧩 Clustering", "💰 ROI Simulator", "☁️ Text Analytics", "📥 Export"])
 
 # ═══════════════════════════════════════════════
 # TAB 1: OVERVIEW
