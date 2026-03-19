@@ -1,4 +1,4 @@
-# TheInfluenceCrew — Deployment Requirements
+# TheInfluenceCrew - Deployment Requirements
 # Updated for compatibility with Streamlit Cloud
 
 pandas>=2.1.4
@@ -10,5 +10,7 @@ scipy>=1.13.1
 openpyxl>=3.1.5
 streamlit>=1.32.0
 watchdog
-wordcloud
-fpdf2
+wordcloud>=1.9.6
+fpdf2>=2.8.7
+networkx>=3.4.2
+

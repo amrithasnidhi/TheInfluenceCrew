@@ -1327,6 +1327,118 @@ with tabs[5]:
         st.pyplot(fig, use_container_width=True)
         plt.close()
 
+    # ── COHORT TREND SIMULATION ───────────────────────────────────────────
+    st.markdown('<div class="section-head">📅 Cohort Trend Simulation — Spending → Engagement → Purchase</div>', unsafe_allow_html=True)
+    st.caption("Each spending cohort shows how engagement translates to purchase behavior — simulating the consumer journey.")
+
+    cohort_spending_order = ['< ₹500', '₹500–₹2000', '₹2000–₹5000', '₹5000+']
+    cohort_spending_present = [s for s in cohort_spending_order if s in filtered['spending'].values]
+
+    if len(cohort_spending_present) >= 2 and n_filtered >= 20:
+        cohort_rows = []
+        for spen in cohort_spending_present:
+            cohort = filtered[filtered['spending'] == spen]
+            cohort_rows.append({
+                'Cohort': spen,
+                'Count': len(cohort),
+                'Avg Engagement': cohort['engagement_ord'].mean(),
+                'Purchase Rate (%)': cohort['made_purchase'].mean() * 100,
+                'Avg Satisfaction': cohort['satisfaction_score'].mean() if 'satisfaction_score' in cohort else 0,
+                'Ad Click Rate (%)': cohort['high_ad_responsive'].mean() * 100,
+                'Avg Interest': cohort['product_interest_score'].mean() if 'product_interest_score' in cohort else 0,
+            })
+        cohort_df = pd.DataFrame(cohort_rows)
+
+        fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+        fig.suptitle('Consumer Journey by Spending Cohort', fontweight='bold', fontsize=12)
+
+        # Chart 1: Purchase Rate by cohort
+        bars = axes[0].bar(cohort_df['Cohort'], cohort_df['Purchase Rate (%)'],
+                           color=PALETTE[:len(cohort_df)], edgecolor='#0a0a0f')
+        axes[0].set_title('Purchase Rate (%) by Cohort', fontweight='bold')
+        axes[0].set_ylabel('Purchase Rate (%)')
+        axes[0].bar_label(bars, fmt='%.1f%%', fontsize=9, padding=2)
+        axes[0].tick_params(axis='x', rotation=20)
+
+        # Chart 2: Engagement vs Purchase scatter (cohort trend line)
+        for i, row in cohort_df.iterrows():
+            axes[1].scatter(row['Avg Engagement'], row['Purchase Rate (%)'],
+                            s=row['Count'] * 2.5, c=PALETTE[i % len(PALETTE)],
+                            alpha=0.85, label=row['Cohort'], zorder=5, edgecolors='white', linewidths=0.5)
+        axes[1].set_xlabel('Avg Engagement Frequency')
+        axes[1].set_ylabel('Purchase Rate (%)')
+        axes[1].set_title('Engagement vs Purchase Rate\n(bubble size = cohort size)', fontweight='bold')
+        axes[1].legend(fontsize=7.5)
+
+        # Chart 3: Stacked comparison — Avg Interest + Avg Satisfaction
+        x = np.arange(len(cohort_df))
+        w = 0.35
+        b1 = axes[2].bar(x - w/2, cohort_df['Avg Interest'], w, label='Avg Interest', color=PALETTE[0], alpha=0.85)
+        b2 = axes[2].bar(x + w/2, cohort_df['Avg Satisfaction'], w, label='Avg Satisfaction', color=PALETTE[2], alpha=0.85)
+        axes[2].set_xticks(x)
+        axes[2].set_xticklabels(cohort_df['Cohort'], rotation=20, fontsize=8)
+        axes[2].set_title('Interest & Satisfaction\nby Spending Cohort', fontweight='bold')
+        axes[2].set_ylabel('Score (1–5)')
+        axes[2].legend(fontsize=9)
+        axes[2].bar_label(b1, fmt='%.2f', fontsize=8, padding=2)
+        axes[2].bar_label(b2, fmt='%.2f', fontsize=8, padding=2)
+
+        plt.tight_layout()
+        st.pyplot(fig, use_container_width=True)
+        plt.close()
+
+        st.markdown("**Cohort Summary Table**")
+        st.dataframe(cohort_df.style.background_gradient(
+            cmap='plasma', subset=['Purchase Rate (%)', 'Ad Click Rate (%)']).format({
+            'Avg Engagement': '{:.2f}', 'Purchase Rate (%)': '{:.1f}%',
+            'Avg Satisfaction': '{:.2f}', 'Ad Click Rate (%)': '{:.1f}%',
+            'Avg Interest': '{:.2f}'
+        }), use_container_width=True)
+
+        # Platform-wise regression trend
+        st.markdown('<div class="section-head">Platform-Wise Regression: Daily Time → Purchase Frequency</div>', unsafe_allow_html=True)
+
+        plat_list = ['Instagram', 'YouTube', 'Pinterest', 'Snapchat', 'Facebook']
+        plat_results = []
+        for plat in plat_list:
+            col_p = f'platform_{plat.lower()}'
+            if col_p in filtered.columns:
+                sub = filtered[filtered[col_p] == 1][['daily_time_ord', 'purchase_ord']].dropna()
+                if len(sub) >= 10:
+                    from sklearn.linear_model import LinearRegression as LR
+                    lrp = LR()
+                    lrp.fit(sub[['daily_time_ord']], sub['purchase_ord'])
+                    r2p = lrp.score(sub[['daily_time_ord']], sub['purchase_ord'])
+                    plat_results.append({
+                        'Platform': plat,
+                        'Users': len(sub),
+                        'Slope (Effect)': round(lrp.coef_[0], 3),
+                        'Intercept': round(lrp.intercept_, 3),
+                        'R²': round(r2p, 3),
+                    })
+
+        if plat_results:
+            plat_reg_df = pd.DataFrame(plat_results).sort_values('Slope (Effect)', ascending=False)
+            fig, ax = plt.subplots(figsize=(10, 4))
+            bar_colors = [PALETTE[i % len(PALETTE)] for i in range(len(plat_reg_df))]
+            bars = ax.bar(plat_reg_df['Platform'], plat_reg_df['Slope (Effect)'],
+                          color=bar_colors, edgecolor='#0a0a0f', alpha=0.88)
+            ax.axhline(0, color='white', linewidth=1.2, linestyle='--', alpha=0.6)
+            ax.set_title('Regression Slope: Daily Time Spent → Purchase Frequency\n(by Platform Users)',
+                         fontweight='bold')
+            ax.set_ylabel('Slope (Effect Size)')
+            ax.bar_label(bars, fmt='%.3f', fontsize=10, padding=3)
+            for i, row in plat_reg_df.iterrows():
+                ax.text(list(plat_reg_df['Platform']).index(row['Platform']),
+                        row['Slope (Effect)'] + (0.005 if row['Slope (Effect)'] >= 0 else -0.015),
+                        f"R²={row['R²']:.3f}\nn={row['Users']}",
+                        ha='center', va='bottom', fontsize=7.5, color='#aaaacc')
+            st.pyplot(fig, use_container_width=True)
+            plt.close()
+    else:
+        st.info("Not enough cohort data in the current filter selection. Widen filters to see cohort trends.")
+
+
 # ═══════════════════════════════════════════════
 # TAB 9: ROI SIMULATOR
 # ═══════════════════════════════════════════════
