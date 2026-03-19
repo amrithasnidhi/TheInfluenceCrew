@@ -1,0 +1,73 @@
+# =============================================
+# TheInfluenceCrew — .gitignore
+# Python / Jupyter / Streamlit Project
+# =============================================
+
+# ---------------------------
+# Microsoft Office Temp Files
+# ---------------------------
+~$*.xlsx
+~$*.xls
+~$*.docx
+~$*.pptx
+~$*.csv
+
+# ---------------------------
+# Python
+# ---------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# ---------------------------
+# Virtual Environments
+# ---------------------------
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# ---------------------------
+# Jupyter Notebook Checkpoints
+# ---------------------------
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ---------------------------
+# Streamlit Cache
+# ---------------------------
+.streamlit/
+__pycache__/
+
+# ---------------------------
+# Data Files (large / sensitive)
+# ---------------------------
+# Uncomment the line below if you want to exclude the raw data file
+# influencer_survey.xlsx
+
+# ---------------------------
+# OS & Editor Artifacts
+# ---------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+.idea/
+.vscode/
+*.code-workspace
+
+# ---------------------------
+# Logs & Temp
+# ---------------------------
+*.log
+*.tmp
+*.bak
+*.orig
