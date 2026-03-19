@@ -26,10 +26,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11.9"
+          python-version: "3.12"
+
           cache: "pip"
 
       - name: Install dependencies
@@ -42,6 +43,7 @@ jobs:
         run: |
           python -m py_compile streamlit_dashboard.py
           jupyter nbconvert --to html --template classic --output index.html influencer_analysis.ipynb
+
           echo "✅ Pre-deploy validation successful"
 
   # 2. Deploy Analytical Website (GitHub Pages)
@@ -53,10 +55,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11.9"
+          python-version: "3.12"
+
           cache: "pip"
 
       - name: Install website tools
@@ -94,5 +97,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Push to production branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
           git push -f origin main:production
+
