@@ -100,7 +100,8 @@ Our Tableau story presents two chapters of the analysis:
 - Projected Lift by Platform (Instagram users vs non-users)
 - Projected Sales Lift by Trust Factor (bubble chart)
 
-> Key finding: **Reels overwhelmingly drive the highest purchase frequency**, with 1,419 respondents attributing 1–2 time purchase decisions to this format. Strategic recommendation: shift 60% of Q4 marketing budget toward short-form video content.
+**✨ Data Agent Feature**
+The Tableau story includes a built-in **Data Agent dropdown** — a curated set of preset questions embedded directly in the dashboard. Users select a question from the dropdown (e.g. *"Which ad format drives the most purchases?"*) and Tableau's Data Agent instantly surfaces a data-backed answer from the underlying survey data — making insights accessible without any manual exploration.
 
 ---
 
