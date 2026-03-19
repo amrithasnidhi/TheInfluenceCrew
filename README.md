@@ -13,6 +13,15 @@
 
 ---
 
+## 🚀 Live Environments
+
+| Environment | Status | URL |
+|-------------|--------|-----|
+| **📊 Real-time Dashboard** | [![](https://img.shields.io/badge/Streamlit-Cloud-FF4B4B?logo=streamlit&logoColor=white)](https://share.streamlit.io/) | [Open Dashboard](https://share.streamlit.io/) |
+| **📓 Analysis Report** | [![](https://img.shields.io/badge/GitHub-Pages-222222?logo=github&logoColor=white)](https://pages.github.com/) | [Open Live Report](https://amrithasnidhi.github.io/TheInfluenceCrew/) |
+
+---
+
 ## 🚀 Quick Start
 
 ### 1. Install dependencies
@@ -63,6 +72,17 @@ jupyter notebook influencer_analysis.ipynb
 - **Tab 4: Pattern Mining** — Association rules with adjustable thresholds
 - **Tab 5: Trends & PCA** — Scree plot, loadings, consumer segment map
 - **Tab 6: Recommendations** — 5 strategic recommendations (auto-updates with filters)
+
+---
+
+## ⚙️ DevOps Infrastructure
+
+Your project features two distinct pipelines for professional maintenance:
+
+| Workflow | trigger | Purpose |
+|----------|---------|---------|
+| **`CI — Build & Validate`** | Every Push / PR | 🧪 Code checks, Linting, & Health tests |
+| **`CD — Live Deployment`** | Push to `main` ONLY | 🚀 Deployment to Live Site & Production branch |
 
 ---
 
