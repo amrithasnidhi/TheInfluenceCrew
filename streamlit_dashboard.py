@@ -1328,6 +1328,203 @@ with tabs[5]:
         plt.close()
 
 # ═══════════════════════════════════════════════
+# TAB 9: ROI SIMULATOR
+# ═══════════════════════════════════════════════
+with tabs[8]:
+    st.markdown('<div class="section-head">💰 Influencer ROI Simulator</div>', unsafe_allow_html=True)
+    st.caption("Estimate campaign ROI based on influencer type, platform, and budget. Values derived from survey benchmarks.")
+
+    # Survey-derived benchmarks
+    BENCHMARKS = {
+        'Nano (1K–10K)':   {'cpm': 80,   'ctr': 0.038, 'cvr': 0.052},
+        'Micro (10K–100K)':{'cpm': 140,  'ctr': 0.028, 'cvr': 0.041},
+        'Macro (100K–1M)': {'cpm': 320,  'ctr': 0.018, 'cvr': 0.029},
+        'Mega (1M+)':      {'cpm': 900,  'ctr': 0.009, 'cvr': 0.015},
+    }
+    PLATFORM_MULTIPLIERS = {
+        'Instagram Reels': {'reach': 1.25, 'ctr': 1.30, 'cpm_mult': 1.10},
+        'YouTube':         {'reach': 1.10, 'ctr': 1.10, 'cpm_mult': 1.05},
+        'Instagram Feed':  {'reach': 0.90, 'ctr': 0.85, 'cpm_mult': 0.95},
+        'Stories':         {'reach': 0.75, 'ctr': 0.70, 'cpm_mult': 0.80},
+        'Snapchat':        {'reach': 0.65, 'ctr': 0.60, 'cpm_mult': 0.75},
+    }
+
+    # Survey-derived ad click rate for the current filtered dataset
+    survey_ctr = filtered['high_ad_responsive'].mean() if n_filtered > 0 else 0.21
+    survey_purchase_rate = filtered['made_purchase'].mean() if n_filtered > 0 else 0.757
+
+    col_inp1, col_inp2, col_inp3 = st.columns(3)
+    with col_inp1:
+        budget = st.number_input("Campaign Budget (₹)", min_value=5000, max_value=5000000,
+                                 value=100000, step=5000, format="%d")
+        influencer_type = st.selectbox("Influencer Type", list(BENCHMARKS.keys()))
+        aov = st.number_input("Avg Order Value — AOV (₹)", min_value=100, max_value=50000, value=1200, step=100)
+    with col_inp2:
+        platform = st.selectbox("Primary Platform", list(PLATFORM_MULTIPLIERS.keys()))
+        num_influencers = st.slider("Number of Influencers", 1, 20, 3)
+        commission_pct = st.slider("Influencer Commission (% of budget)", 10, 80, 40) / 100
+    with col_inp3:
+        retargeting_pct = st.slider("Retargeting Budget Allocation (%)", 0, 50, 20) / 100
+        funnel_dropoff = st.slider("Funnel Drop-off Adjustment (%)", 0, 50, 15) / 100
+        # Actual purchase rate from survey
+        st.metric("Survey Purchase Rate", f"{survey_purchase_rate*100:.1f}%", "From filtered data")
+
+    st.markdown("---")
+
+    bench = BENCHMARKS[influencer_type]
+    plat = PLATFORM_MULTIPLIERS[platform]
+
+    # Calculations
+    content_budget = budget * commission_pct
+    ad_budget = budget * retargeting_pct
+    other_budget = budget * (1 - commission_pct - retargeting_pct)
+
+    cpm_eff = bench['cpm'] * plat['cpm_mult']
+    reach = (content_budget / cpm_eff) * 1000 * plat['reach']
+    clicks = reach * bench['ctr'] * plat['ctr']
+    conversions = clicks * bench['cvr'] * (1 - funnel_dropoff)
+    # Add retargeting conversions
+    retarg_reach = (ad_budget / (cpm_eff * 0.6)) * 1000 if ad_budget > 0 else 0
+    retarg_conversions = retarg_reach * bench['ctr'] * 0.7 * bench['cvr'] * (1 - funnel_dropoff)
+    total_conversions = conversions + retarg_conversions
+    revenue = total_conversions * aov
+    roi = ((revenue - budget) / budget) * 100 if budget > 0 else 0
+    cpa = budget / total_conversions if total_conversions > 0 else 0
+    roas = revenue / budget if budget > 0 else 0
+
+    # KPI display
+    k1, k2, k3, k4, k5 = st.columns(5)
+    k1.metric("📢 Est. Reach", f"{reach:,.0f}")
+    k2.metric("🖱️ Est. Clicks", f"{clicks:,.0f}", f"CTR {bench['ctr']*plat['ctr']*100:.2f}%")
+    k3.metric("🛒 Est. Conversions", f"{total_conversions:,.0f}")
+    k4.metric("💵 Est. Revenue (₹)", f"₹{revenue:,.0f}")
+    k5.metric("📈 ROI", f"{roi:.1f}%", "ROAS {:.2f}x".format(roas))
+
+    col_vis1, col_vis2 = st.columns(2)
+
+    with col_vis1:
+        # Budget breakdown pie
+        fig, ax = plt.subplots(figsize=(5, 4))
+        bdg_labels = ['Influencer Commission', 'Retargeting Ads', 'Other (Production/Tools)']
+        bdg_vals = [content_budget, ad_budget, other_budget]
+        bdg_colors = [PALETTE[0], PALETTE[1], PALETTE[2]]
+        wedges, texts, autotexts = ax.pie(bdg_vals, labels=bdg_labels, autopct='%1.1f%%',
+                                           colors=bdg_colors, startangle=90,
+                                           wedgeprops={'edgecolor': '#0a0a0f', 'linewidth': 2})
+        for t in autotexts: t.set_fontsize(8)
+        ax.set_title(f'Budget Allocation\n(Total: ₹{budget:,})', fontweight='bold')
+        st.pyplot(fig, use_container_width=True)
+        plt.close()
+
+    with col_vis2:
+        # ROI vs Budget curve
+        budget_range = np.linspace(10000, max(budget * 2, 500000), 60)
+        roi_curve = []
+        for b in budget_range:
+            cb = b * commission_pct
+            ab = b * retargeting_pct
+            r = (cb / cpm_eff) * 1000 * plat['reach']
+            cl = r * bench['ctr'] * plat['ctr']
+            cv = cl * bench['cvr'] * (1 - funnel_dropoff)
+            rr = (ab / (cpm_eff * 0.6)) * 1000 if ab > 0 else 0
+            rc = rr * bench['ctr'] * 0.7 * bench['cvr'] * (1 - funnel_dropoff)
+            rev = (cv + rc) * aov
+            roi_curve.append(((rev - b) / b) * 100 if b > 0 else 0)
+
+        fig, ax = plt.subplots(figsize=(5, 4))
+        ax.plot(budget_range / 1000, roi_curve, '-', color=PALETTE[0], linewidth=2.5)
+        ax.axvline(budget / 1000, color=PALETTE[1], linestyle='--', linewidth=1.5,
+                   label=f'Your budget ₹{budget/1000:.0f}K')
+        ax.axhline(0, color='white', linewidth=1, alpha=0.4)
+        ax.fill_between(budget_range / 1000, roi_curve, 0,
+                        where=[r > 0 for r in roi_curve], alpha=0.12, color=PALETTE[2])
+        ax.set_xlabel('Budget (₹ thousands)')
+        ax.set_ylabel('Estimated ROI (%)')
+        ax.set_title('ROI vs Budget Curve', fontweight='bold')
+        ax.legend(fontsize=9)
+        st.pyplot(fig, use_container_width=True)
+        plt.close()
+
+    # Additional metrics
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        st.markdown(f"""
+        <div class="insight-box">
+          <div class="insight-title" style="color:{PALETTE[0]}">💡 Cost Per Acquisition</div>
+          <div class="insight-text">₹{cpa:,.2f} per conversion — {'✅ Efficient' if cpa < aov * 0.3 else '⚠️ High — reduce retargeting or switch influencer tier'}</div>
+        </div>
+        <div class="insight-box">
+          <div class="insight-title" style="color:{PALETTE[2]}">📊 ROAS</div>
+          <div class="insight-text">{roas:.2f}x — For every ₹1 spent, you earn ₹{roas:.2f} back in revenue. {'✅ Positive ROI' if roas > 1 else '❌ Below break-even — adjust budget mix'}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_m2:
+        st.markdown(f"""
+        <div class="insight-box">
+          <div class="insight-title" style="color:{PALETTE[3]}">🎯 Break-Even Point</div>
+          <div class="insight-text">Need at least {int(budget/aov)} conversions at AOV ₹{aov:,} to break even. Current estimate: {total_conversions:.0f} conversions.</div>
+        </div>
+        <div class="insight-box">
+          <div class="insight-title" style="color:{PALETTE[4]}">👥 Per Influencer Reach</div>
+          <div class="insight-text">~{reach/num_influencers:,.0f} people per influencer at ₹{content_budget/num_influencers:,.0f} budget each.</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Scenario comparison table
+    st.markdown('<div class="section-head">📊 Scenario Comparison — 3 Strategy Options</div>', unsafe_allow_html=True)
+
+    scenarios = [
+        {"Name": "🎯 Micro-Influencer Heavy", "type": "Micro (10K–100K)", "platform": "Instagram Reels",
+         "commission": 0.60, "retargeting": 0.15, "n_inf": 10},
+        {"Name": "📺 Macro + YouTube", "type": "Macro (100K–1M)", "platform": "YouTube",
+         "commission": 0.55, "retargeting": 0.25, "n_inf": 2},
+        {"Name": "💥 Mega Brand Play", "type": "Mega (1M+)", "platform": "Instagram Reels",
+         "commission": 0.70, "retargeting": 0.10, "n_inf": 1},
+    ]
+
+    scen_rows = []
+    for sc in scenarios:
+        b_sc = BENCHMARKS[sc['type']]
+        p_sc = PLATFORM_MULTIPLIERS[sc['platform']]
+        cb_sc = budget * sc['commission']
+        ab_sc = budget * sc['retargeting']
+        cpm_sc = b_sc['cpm'] * p_sc['cpm_mult']
+        reach_sc = (cb_sc / cpm_sc) * 1000 * p_sc['reach']
+        clicks_sc = reach_sc * b_sc['ctr'] * p_sc['ctr']
+        conv_sc = clicks_sc * b_sc['cvr'] * (1 - funnel_dropoff)
+        rr_sc = (ab_sc / (cpm_sc * 0.6)) * 1000 if ab_sc > 0 else 0
+        rc_sc = rr_sc * b_sc['ctr'] * 0.7 * b_sc['cvr'] * (1 - funnel_dropoff)
+        total_conv_sc = conv_sc + rc_sc
+        rev_sc = total_conv_sc * aov
+        roi_sc = ((rev_sc - budget) / budget) * 100
+        cpa_sc = budget / total_conv_sc if total_conv_sc > 0 else 0
+
+        scen_rows.append({
+            'Strategy': sc['Name'],
+            'Influencer Type': sc['type'],
+            'Platform': sc['platform'],
+            '# Influencers': sc['n_inf'],
+            'Est. Reach': f"{reach_sc:,.0f}",
+            'Est. Conversions': f"{total_conv_sc:.0f}",
+            'Est. Revenue (₹)': f"₹{rev_sc:,.0f}",
+            'ROI (%)': f"{roi_sc:.1f}%",
+            'CPA (₹)': f"₹{cpa_sc:,.0f}",
+        })
+
+    scen_df = pd.DataFrame(scen_rows)
+    st.dataframe(scen_df, use_container_width=True)
+
+    # Best scenario highlight
+    best_sc = max(scenarios, key=lambda s: (
+        (budget * s['commission'] / (BENCHMARKS[s['type']]['cpm'] * PLATFORM_MULTIPLIERS[s['platform']]['cpm_mult'])) * 1000
+        * PLATFORM_MULTIPLIERS[s['platform']]['reach']
+        * BENCHMARKS[s['type']]['ctr'] * PLATFORM_MULTIPLIERS[s['platform']]['ctr']
+        * BENCHMARKS[s['type']]['cvr'] * (1 - funnel_dropoff) * aov
+    ))
+    st.success(f"🏆 **Recommended Strategy for ₹{budget:,} budget:** {best_sc['Name']} — maximizes estimated reach and conversion for this AOV and influencer mix.")
+
+
+# ═══════════════════════════════════════════════
 # TAB 6: RECOMMENDATIONS
 # ═══════════════════════════════════════════════
 with tabs[6]:
