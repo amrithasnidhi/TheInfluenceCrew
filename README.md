@@ -11,6 +11,7 @@ Luminary is a data-driven study into the world of influencer marketing — explo
 | `influencer_analysis.ipynb` | Complete Jupyter Notebook — all 5 BA methodologies |
 | `streamlit_dashboard.py` | Live interactive Streamlit dashboard |
 | `requirements.txt` | Python dependencies |
+| `influencer_survey.xlsx` | Project Dataset |
 
 ---
 
