@@ -1,4 +1,4 @@
-# ✨ Luminary
+# ✨ The Influence Crew
 
 Luminary is a data-driven study into the world of influencer marketing — exploring how social media content shapes consumer trust, drives purchase decisions, and varies across age groups, platforms, and ad formats. Built on survey data from 4,210 respondents, it combines statistical modeling, machine learning, and interactive visualization to surface insights that help brands invest smarter in the creator economy.
 
